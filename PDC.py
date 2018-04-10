@@ -11,16 +11,20 @@
 #         BOTTOM row of the w-ocean corresponds to LEFT  multiplication
 
 # TODO:
-# implement formula for c_w
 # w-ocean vertices need to be smaller for n > 20
 # modify Heap's algorithm to generate parabolic subgroups or cosets?
 # add parameter indicating whether to save w-ocean to file
 # prove that minimal(I,w,J) works
 # fix conflicts between global variable names and parameter names
+# every large ascent is either a float, rope, or tether, so you can get rid of
+# one of those methods if you change float to compute where the floats are and
+# not just the number of them
+# change powerset method to return sets of sets rather than sets of tuples
 
 
 import turtle # for drawing w-oceans
 from tkinter import * # for saving w-oceans to postscript
+from itertools import chain, combinations # for powerset function
 
 ####################
 # GLOBAL VARIABLES #
@@ -594,7 +598,7 @@ def num_floats(w):
                     result += 1
         if isLargeLeftAscent(w,i):
             if (i == 1) or (not isSmallLeftAscent(w,i-1)):
-                if (i == n) or (not isSmallLeftAscent(w,i+1)):
+                if (i + 1 == n) or (not isSmallLeftAscent(w,i+1)):
                     result += 1
     return result
 
@@ -616,28 +620,59 @@ def rafts(w):
     result.add((a,l[-1]))
     return result
 
-# Returns the set of ropes of w
-#def ropes(w):
-#    asdf
+# NOTE: negative indices will indicate indices in the BOTTOM (left) row
+
+# Returns the set of indices of right ropes of w
+def rightRopes(w):
+    result = set()
+    for i in range(1,n):
+        if isLargeRightAscent(w,i):
+            if i == 1:
+                if isSmallRightAscent(w,i+1):
+                    result.add(i)
+            elif i == n-1:
+                if isSmallRightAscent(w,i-1):
+                    result.add(i)
+            elif (isSmallRightAscent(w,i-1) and not isSmallRightAscent(w,i+1)) or (not isSmallRightAscent(w,i-1) and isSmallRightAscent(w,i+1)):
+                result.add(i)
+    return result
+
+# Returns the set of indices of left ropes of w
+def leftRopes(w):
+    result = set()
+    for i in range(1,n):
+        if isLargeLeftAscent(w,i):
+            if i == 1:
+                if isSmallLeftAscent(w,i+1):
+                    result.add(-1*i)
+            elif i == n-1:
+                if isSmallLeftAscent(w,i-1):
+                    result.add(-1*i)
+            elif (isSmallLeftAscent(w,i-1) and not isSmallLeftAscent(w,i+1)) or (not isSmallLeftAscent(w,i-1) and isSmallLeftAscent(w,i+1)):
+                result.add(-1*i)
+    return result
+
+# Returns the set of indices of ropes of w
+def ropes(w):
+    return rightRopes(w).union(leftRopes(w))
     
 
-# Returns the set of indices {i | s_i is a left tether in the w-ocean}
+# Returns the set of indices {i | s_i is a right tether in the w-ocean}
 def rightTethers(w):
     result = set()
     for i in range(2,n-1):
         if isLargeRightAscent(w,i):
             if i + 1 < n and isSmallRightAscent(w,i+1) and isSmallRightAscent(w,i-1):
                 result.add(i)
-    
     return result
 
-# Returns the set of indices {i | s_i is a left tether in the w-ocean}
+# Returns the set of indices {-i | s_i is a left tether in the w-ocean}
 def leftTethers(w):
     result = set()
     for i in range(2,n-1):
         if isLargeLeftAscent(w,i):
             if i + 1 < n and isSmallLeftAscent(w,i+1) and isSmallLeftAscent(w,i-1):
-                result.add(i)
+                result.add(-1*i)
     return result
 
 # Returns the set of indices {i | s_i is a tether in the w-ocean}
@@ -650,20 +685,65 @@ def tethers(w):
 ##############
 
 
+# Boundary apparatus
+# Returns a tuple (I,J,K,L) where I,J,K,L are in the set {0,1,10}
+# 1 corresponds to an index in T (a particular subset of tethers(w))
+# 10 corresponds to a rope
+# 0 corresponds to anything else (a descent, an edge, or a tether not in T)
+# I = bottom left, J = top left, K = bottom right, L = top right
+def bd(w,ropeSet,T,R):
+    I = J = K = L = 0
+    if R[0] - 1 > 0:
+        if -1*(w[R[0]-1] - 1) in ropeSet:
+            I = 10
+        elif -1*(w[R[0]-1] - 1) in T:
+            I = 1
+        if (R[0] - 1) in ropeSet:
+            J = 10
+        elif R[0] - 1 in T:
+            J = 1
+    if R[1] < n - 1:
+        if -1*(w[R[1]-1] + 1) in ropeSet:
+            K = 10
+        elif -1*(w[R[1]-1] + 1) in T:
+            K = 1
+        if R[1] + 1 in ropeSet:
+            L = 10
+        elif R[1] + 1 in T:
+            L = 1
+    return (I,J,K,L)
+
+
 # Returns c_w, the number of parabolic double cosets in S_n with
 # minimal length element w
-##def c(w):
-##    result = 0
-##    for T in Tethers_Pow(w):
-##        product = 1
-##        for R in Rafts(w):
-##            product *= b(dictionary[----],R)
-##
-##    return (2^num_floats)*result
+def c(w):
+    result = 0
+    for T in powerset(tethers(w)):
+        product = 1
+        for R in rafts(w):
+            product *= b(dictionary[bd(w,ropes(w),T,R)], R[1] - R[0]+ 1)
+        result += product
+    return pow(2,num_floats(w))*result
 
 # Returns p_m, the number of parabolic double cosets in S_m
-##def p(m):
-##    result = 0
-##    for w in S(m):
-##        result += c(w)
-##    return result
+def p(m):
+    global n
+    n = m
+    result = 0
+    for w in S(m):
+        result += c(w)
+    return result
+
+# Returns the powerset of the given parameter, as a set of tuples
+def powerset(iterable):
+    result = set()
+    for x in powerset2(iterable):
+        result.add(x)
+    return result
+
+# I got this code from user Martijn Pieters on Stackoverflow
+# link: https://stackoverflow.com/questions/18035595/powersets-in-python-using-itertools?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+def powerset2(iterable):
+    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))

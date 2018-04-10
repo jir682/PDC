@@ -7,18 +7,20 @@
 # Recall: multiplying on the LEFT  permutes VALUES
 #         multiplying on the RIGHT permutes POSITIONS
 #         permutations are multiplied from RIGHT to LEFT
+#         TOP row of the w-ocean corresponds to RIGHT multiplication
+#         BOTTOM row of the w-ocean corresponds to LEFT  multiplication
 
 # TODO:
+# implement formula for c_w
 # w-ocean vertices need to be smaller for n > 20
 # modify Heap's algorithm to generate parabolic subgroups or cosets?
-# move turtle initialization to a function
+# add parameter indicating whether to save w-ocean to file
+# prove that minimal(I,w,J) works
+# fix conflicts between global variable names and parameter names
+
 
 import turtle # for drawing w-oceans
 from tkinter import * # for saving w-oceans to postscript
-
-turtle.setup(width=1200, height=600)
-turtle.delay(0)
-turtle.speed(0)
 
 ####################
 # GLOBAL VARIABLES #
@@ -108,9 +110,13 @@ for i in range(27):
 # BASIC FUNCTIONS #
 ###################
 
+def init_turtle():
+    turtle.setup(width=1200, height=600)
+    turtle.delay(0)
+    turtle.speed(0)
+
 
 # Changes to the symmetric group S_n
-# currently not working, and I don't know why
 # def change_n(k):
 #    global n
 #    n = k
@@ -341,6 +347,11 @@ def equals(I,w,J,K,z,L):
     return (minimal(I,w,J) == minimal(K,z,L)) & (maximal(I,w,J) == maximal(K,z,L))
 
 
+# Returns the rank of W_IwW_J
+def rank(I,w,J):
+    return len(maximal(I,w,J)) - len(minimal(I,w,J)) + 1
+
+
 ###############################
 # A-SEQUENCES AND B-SEQUENCES #
 ###############################
@@ -385,6 +396,10 @@ def print_a(k,n):
 
 # Returns the mth term of the b-sequence for k = (I,J,K,L)
 # I,J,K,L are in {0,1,10}, where 0 represents {0}, 1 represents {1}, and 10 represents {0,1}
+def b2(R,T,m):
+    asdf
+
+# Returns b^k_m, the mth term of the k^th b-sequence
 def b(k,m):
     if B[k][m] != 0:
         return B[k][m]
@@ -459,6 +474,7 @@ def generate(m,E,result):
                 E[0] = E[m - 1]
                 E[m - 1] = aux
         generate(m - 1,E,result)
+
 
 ############
 # W-OCEANS #
@@ -567,3 +583,87 @@ def drawS(k):
     n = k
     for w in S(k):
         drawOcean(w)
+
+# Returns the number of floats in the w-ocean
+def num_floats(w):
+    result = 0
+    for i in range(1,n):
+        if isLargeRightAscent(w,i):
+            if (i == 1) or (not isSmallRightAscent(w,i-1)):
+                if (i + 1 == n) or (not isSmallRightAscent(w,i+1)):
+                    result += 1
+        if isLargeLeftAscent(w,i):
+            if (i == 1) or (not isSmallLeftAscent(w,i-1)):
+                if (i == n) or (not isSmallLeftAscent(w,i+1)):
+                    result += 1
+    return result
+
+# Returns the set of rafts of w as a set of tuples
+# (a,b) indicates there is a raft from positions s_a to s_b
+def rafts(w):
+    result = set()
+    l = list(smallRightAscentSet(w))
+    l.sort()
+    if len(l) == 0:
+        return result
+    a = l[0]
+    for i in range(len(l)-1):
+        if i == len(l) - 1:
+            result.add((a,l[i]))
+        elif l[i+1] != l[i] + 1:
+            result.add((a,l[i]))
+            a = l[i + 1]
+    result.add((a,l[-1]))
+    return result
+
+# Returns the set of ropes of w
+#def ropes(w):
+#    asdf
+    
+
+# Returns the set of indices {i | s_i is a left tether in the w-ocean}
+def rightTethers(w):
+    result = set()
+    for i in range(2,n-1):
+        if isLargeRightAscent(w,i):
+            if i + 1 < n and isSmallRightAscent(w,i+1) and isSmallRightAscent(w,i-1):
+                result.add(i)
+    
+    return result
+
+# Returns the set of indices {i | s_i is a left tether in the w-ocean}
+def leftTethers(w):
+    result = set()
+    for i in range(2,n-1):
+        if isLargeLeftAscent(w,i):
+            if i + 1 < n and isSmallLeftAscent(w,i+1) and isSmallLeftAscent(w,i-1):
+                result.add(i)
+    return result
+
+# Returns the set of indices {i | s_i is a tether in the w-ocean}
+def tethers(w):
+    return rightTethers(w).union(leftTethers(w))
+
+
+##############
+# c_w and p_n#
+##############
+
+
+# Returns c_w, the number of parabolic double cosets in S_n with
+# minimal length element w
+##def c(w):
+##    result = 0
+##    for T in Tethers_Pow(w):
+##        product = 1
+##        for R in Rafts(w):
+##            product *= b(dictionary[----],R)
+##
+##    return (2^num_floats)*result
+
+# Returns p_m, the number of parabolic double cosets in S_m
+##def p(m):
+##    result = 0
+##    for w in S(m):
+##        result += c(w)
+##    return result

@@ -28,7 +28,7 @@
 #
 # parabolic_subgroup(I) - returns the parabolic subgroup W_I
 #
-# PDC(W_I,w,W_J) - returns the parabolic double coset W_IwW_J
+# PDC(I,w,J) - returns the parabolic double coset W_IwW_J
 
 
 
@@ -48,6 +48,10 @@
 # Optimize parabolic_subgroup(I) function (possibly using Heap's algorithm?)
 # Add a print_intro() function that explains how to use the program
 # Add a function to generate random permutations
+# Use the Klein four action to speed up the computation of p_n
+# (add a function to produce the equivalene classes)
+# (i.e. only compute c_w for one w in each equivalence class)
+# Add a method to compute all (Bruhat) intervals in S_n (and draw them?)
 
 
 import turtle # for drawing w-oceans
@@ -70,9 +74,9 @@ print('Currently N = ' + str(N) + '.')
 # NOTE: Permutations are written in one-line notation and are represented as tuples
 
 # examples for testing
-##w1 = (3, 1, 4, 5, 2)
-##w2 = (1,3,4,5,7,8,2,6,14,15,16,9,10,11,12,13)
-##w3 = (7,1,2,3,5,4,6)
+w1 = (3, 1, 4, 5, 2)
+w2 = (1,3,4,5,7,8,2,6,14,15,16,9,10,11,12,13)
+w3 = (7,1,2,3,5,4,6)
 
 # Subsets of adjacent transpositions, represented as sets
 # examples for testing
@@ -620,6 +624,22 @@ def num_floats(w):
                     result += 1
     return result
 
+# NOTE: negative indices will indicate indices in the BOTTOM row
+
+# Returns the set of indices of floats of w
+def floats(w):
+    result = set()
+    for i in range(1,N):
+        if isLargeRightAscent(w,i):
+            if i == 1 or not isSmallRightAscent(w, i - 1):
+                if i + 1 == N or (not isSmallRightAscent(w, i + 1)):
+                    result.add(i)
+        if isLargeLeftAscent(w,i):
+            if i == 1 or not isSmallLeftAscent(w, i - 1):
+                if i + 1 == N or not isSmallLeftAscent(w, i + 1):
+                    result.add(-1*i)
+    return result
+
 # Returns the set of rafts of w as a set of 2-tuples
 # (a,b) indicates there is a raft from s_a to s_b (in the top row)
 def rafts(w):
@@ -637,8 +657,6 @@ def rafts(w):
             a = l[i + 1]
     result.add((a,l[-1]))
     return result
-
-# NOTE: negative indices will indicate indices in the BOTTOM (left) row
 
 # Returns the set of indices of right ropes of w
 def rightRopes(w):
@@ -696,10 +714,74 @@ def leftTethers(w):
 def tethers(w):
     return rightTethers(w).union(leftTethers(w))
 
+# Returns the w-ocean as a 4-tuple of tuples
+# First tuple contains rafts
+# Second tuple contains floats
+# Third tuple contains ropes
+# Fourth tuple contains tethers
+# Each tuple is sorted so that oceans will be comparable
+def ocean(w):
+    raft_list = list(rafts(w))
+    raft_list.sort()
+    float_list = list(floats(w))
+    float_list.sort()
+    rope_list = list(ropes(w))
+    rope_list.sort()
+    tether_list = list(tethers(w))
+    tether_list.sort()
+    return (tuple(raft_list), tuple(float_list), tuple(rope_list), tuple(tether_list))
 
-##############
-# c_w and p_n#
-##############
+# Returns the set of w-oceans in S_n
+def oceans_S(n):
+    global N
+    N = n
+    print('Currently N = ' + str(n) + '.')
+    result = set()
+    for w in S(n):
+        result.add(ocean(w))
+    return result
+
+# Returns the set of duplicate w-oceans in S_n
+# (w-oceans that belong to more than one permutation)
+def duplicates(n):
+    global N
+    N = n
+    print('Currently N = ' + str(n) + '.')
+    result = set()
+    duplicates = set()
+    for w in S(n):
+        o = ocean(w)
+        if o in result:
+            duplicates.add(o)
+        result.add(o)
+    return duplicates
+
+# Returns a list ocean-permutation pairs (2-tuples)
+# containing all duplicate w-oceans in S_n
+# Saves w-oceans to current directory if save == true
+# Prints the returned list if printing == true
+def duplicate_pairs(n,printing,save):
+    global N
+    N = n
+    print('Currently N = ' + str(n) + '.')
+    result = list()
+    d = duplicates(n)
+    for w in S(n):
+        o = ocean(w)
+        if o in d:
+            result.append((o,w))
+            if save:
+                drawOcean(w,save)
+    result.sort()
+    if printing:
+        for x in result:
+            print(x)
+    return result
+        
+
+###############
+# c_w and p_n #
+###############
 
 
 # Boundary apparatus of the given raft R in the permutation w

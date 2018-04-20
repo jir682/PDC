@@ -1,35 +1,8 @@
 # PDC.py
 # Author: Jesse Rivera
-# Last modified: 4/11/18
 
 # A program for working with permutations and parabolic double cosets in symmetric groups
 # For use with the Washington Experimental Mathematics Lab (WXML)
-
-
-# Primary functions:
-#
-# drawOcean(w,save) - draws the w-ocean of a given permutation w and (optionally)
-# saves it to a .eps file in the current directory
-#
-# draw_S(n) - draws the w-ocean of every permutation in S_n and saves them to
-# the current directory
-#
-# c(w) - returns c_w, the number of parabolic double cosets in S_n whose minimal
-# length element is w
-#
-# print_cw(n) - prints c_w for each permutation w in S_n
-#
-# p(n) - returns the number of parabolic double cosets in S_n
-#
-# cw_class(n,k) - returns the set {w in S_n | c_w = k}
-#
-# minimal(I,w,J) - returns the minimal length element in the parabolic double
-# coset W_IwW_J
-#
-# parabolic_subgroup(I) - returns the parabolic subgroup W_I
-#
-# PDC(I,w,J) - returns the parabolic double coset W_IwW_J
-
 
 
 # Recall: multiplying on the LEFT  permutes VALUES
@@ -39,24 +12,10 @@
 #         BOTTOM row of the w-ocean corresponds to LEFT  multiplication
 
 
-# TODO:
-# Scale w-ocean vertex radii as a function of N (they need to be smaller for N > 20)
-# Prove that minimal(I,w,J) works
-# Change powerset method to return sets of sets rather than sets of tuples
-# Add a function to compute the reduced expression for a permutation
-# Implement the a-sequence recurrence relation for k = 0,1,2,3,4 (excluding 2',2'')
-# Optimize parabolic_subgroup(I) function (possibly using Heap's algorithm?)
-# Add a print_intro() function that explains how to use the program
-# Add a function to generate random permutations
-# Use the Klein four action to speed up the computation of p_n
-# (add a function to produce the equivalene classes)
-# (i.e. only compute c_w for one w in each equivalence class)
-# Add a method to compute all (Bruhat) intervals in S_n (and draw them?)
-
-
 import turtle # for drawing w-oceans
 from tkinter import * # for saving w-oceans to postscript
 from itertools import chain, combinations # for powerset function
+import time # for test functions
 
 
 ####################
@@ -74,6 +33,7 @@ print('Currently N = ' + str(N) + '.')
 # NOTE: Permutations are written in one-line notation and are represented as tuples
 
 # examples for testing
+w0 = (5,4,3,2,1)
 w1 = (3, 1, 4, 5, 2)
 w2 = (1,3,4,5,7,8,2,6,14,15,16,9,10,11,12,13)
 w3 = (7,1,2,3,5,4,6)
@@ -157,7 +117,17 @@ def init_turtle():
 
 init_turtle()
 
-# Returns the powerset of the given iterable parameter, as a set of tuples
+def set_N(n):
+    global N
+    N = n
+    global w0
+    x = [0]*n
+    for i in range(n):
+        x[i] = n - i
+    w0 = tuple(x)
+    print('Currently N = ' + str(n) + '.')
+
+# Returns the powerset of the given iterable structure, as a set of tuples
 def powerset(X):
     return set(chain.from_iterable(combinations(list(X), r) for r in range(len(X)+1)))
 
@@ -604,9 +574,8 @@ def drawRow(x,y,dx,r,R,rightAscent,smallRight,largeRight):
 # Draws the w-ocean of every permutation in S_n and saves them to current directory
 # (i.e. the same directory as PDC.py)
 def draw_S(n):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     for w in S(n):
         drawOcean(w,True)
 
@@ -640,8 +609,9 @@ def floats(w):
                     result.add(-1*i)
     return result
 
-# Returns the set of rafts of w as a set of 2-tuples
-# (a,b) indicates there is a raft from s_a to s_b (in the top row)
+# Returns the set of rafts of w as a set of 4-tuples
+# (a,b,w(a),w(b)) indicates there is a raft from s_a to s_b (in the top row)
+# connecting to the raft from s_w(a) to s_w(b) (in the bottom row)
 def rafts(w):
     result = set()
     l = list(smallRightAscentSet(w))
@@ -651,11 +621,11 @@ def rafts(w):
     a = l[0]
     for i in range(len(l) - 1):
         if i == len(l) - 1:
-            result.add((a,l[i]))
+            result.add((a, l[i], w[a - 1], w[l[i] - 1]))
         elif l[i + 1] != l[i] + 1:
-            result.add((a,l[i]))
+            result.add((a, l[i], w[a - 1], w[l[i] - 1]))
             a = l[i + 1]
-    result.add((a,l[-1]))
+    result.add((a, l[-1], w[a - 1], w[l[-1] - 1]))
     return result
 
 # Returns the set of indices of right ropes of w
@@ -733,9 +703,8 @@ def ocean(w):
 
 # Returns the set of w-oceans in S_n
 def oceans_S(n):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     result = set()
     for w in S(n):
         result.add(ocean(w))
@@ -744,9 +713,8 @@ def oceans_S(n):
 # Returns the set of duplicate w-oceans in S_n
 # (w-oceans that belong to more than one permutation)
 def duplicates(n):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     result = set()
     duplicates = set()
     for w in S(n):
@@ -758,25 +726,31 @@ def duplicates(n):
 
 # Returns a list ocean-permutation pairs (2-tuples)
 # containing all duplicate w-oceans in S_n
-# Saves w-oceans to current directory if save == true
 # Prints the returned list if printing == true
-def duplicate_pairs(n,printing,save):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+# Saves the list to text file if save_text == true
+# Saves w-ocean .eps files to current directory if save_pic == true
+def duplicate_pairs(n,printing,save_text,save_pic):
+    if n != N:
+        set_N(n)
     result = list()
     d = duplicates(n)
     for w in S(n):
         o = ocean(w)
         if o in d:
             result.append((o,w))
-            if save:
+            if save_pic:
                 drawOcean(w,save)
     result.sort()
     if printing:
         for x in result:
             print(x)
+    if save_text:
+        f = open('S_' + str(n) + '_duplicate_pairs.txt','w')
+        for x in result:
+            f.write(str(x) + '\n')
     return result
+
+
         
 
 ###############
@@ -827,17 +801,15 @@ def c(w):
 
 # Prints c_w for each permutation w in S_n
 def print_cw(n):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     for w in S(n):
         print('c_' + str(w) + ' = ' + str(c(w)))
     
 # Returns p_n, the number of parabolic double cosets in S_n
 def p(n):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     result = 0
     for w in S(n):
         result += c(w)
@@ -845,11 +817,78 @@ def p(n):
 
 # Returns the set {w in S_n | c_w = k}
 def cw_class(n,k):
-    global N
-    N = n
-    print('Currently N = ' + str(n) + '.')
+    if n != N:
+        set_N(n)
     result = set()
     for w in S(n):
         if c(w) == k:
             result.add(w)
     return result
+
+# Returns p_n (uses WXML equivalence classes)
+def p2(n):
+    if n != N:
+        set_N(n)
+    WXML = dict()
+    result = 0
+    for w in S(n):
+        if w not in WXML:
+            WXML[w] = WXML[inverse(w)] = WXML[mult(w0,mult(w,w0))] = WXML[mult(w0,mult(inverse(w),w0))] = c(w)
+        result += WXML[w]
+    return result
+
+# Returns p_n (uses duplicate oceans)
+def p3(n):
+    if n != N:
+        set_N(n)
+    OCEANS = dict()
+    result = 0
+    for w in S(n):
+        o = ocean(w)
+        if o not in OCEANS:
+            OCEANS[o] = c(w)
+        result += OCEANS[o]
+    return result
+
+# Returns p_n (uses duplicate oceans and WXML equivalence classes)
+def p4(n):
+    if n != N:
+        set_N(n)
+    OCEANS = dict()
+    result = 0
+    for w in S(n):
+        o = ocean(w)
+        if o not in OCEANS:
+            OCEANS[o] = OCEANS[ocean(inverse(w))] = OCEANS[mult(w0,mult(w,w0))] = OCEANS[mult(w0,mult(inverse(w),w0))] = c(w)
+        result += OCEANS[o]
+    return result
+
+# Test functions that time how long it takes to compute p_n
+def test_p(n):
+    for i in range(1,n + 1):
+        start = time.time()
+        result = p(i)
+        end = time.time()
+        print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
+
+def test_p2(n):
+    for i in range(1,n + 1):
+        start = time.time()
+        result = p2(i)
+        end = time.time()
+        print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
+
+def test_p3(n):
+    for i in range(1,n + 1):
+        start = time.time()
+        result = p3(i)
+        end = time.time()
+        print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
+
+def test_p4(n):
+    for i in range(1,n + 1):
+        start = time.time()
+        result = p4(i)
+        end = time.time()
+        print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
+        

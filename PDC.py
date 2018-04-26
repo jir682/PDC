@@ -16,6 +16,8 @@ import turtle # for drawing w-oceans
 from tkinter import * # for saving w-oceans to postscript
 from itertools import chain, combinations # for powerset function
 import time # for test functions
+import random
+import math
 
 
 ####################
@@ -115,7 +117,7 @@ def init_turtle():
     turtle.delay(0)
     turtle.speed(0)
 
-init_turtle()
+##init_turtle()
 
 def set_N(n):
     global N
@@ -442,29 +444,29 @@ def PDC(I,w,J):
     return double_coset(parabolic_subgroup(I),w,parabolic_subgroup(J))
 
 # Returns the symmetric group S_n as a set, using Heap's algorithm (recursive)
-def S(k):
+def S(n):
     result = set()
-    generate(k,list(range(1,N + 1)),result)
+    generate(n,list(range(1,N + 1)),result)
     return result
 
-def generate(m,E,result):
+def generate(n,E,result):
     aux = 0
-    if m == 1:
+    if n == 1:
           result.add(tuple(E))
     else:
-        for i in range(m - 1):
-            generate(m - 1,E,result)
-            if m % 2 == 0:
+        for i in range(n - 1):
+            generate(n - 1,E,result)
+            if n % 2 == 0:
                 # swapping E[i] and E[m-1]
                 aux = E[i]
-                E[i] = E[m - 1]
-                E[m - 1] = aux
+                E[i] = E[n - 1]
+                E[n - 1] = aux
             else:
                 # swapping E[0] and E[m-1]
                 aux = E[0]
-                E[0] = E[m - 1]
-                E[m - 1] = aux
-        generate(m - 1,E,result)
+                E[0] = E[n - 1]
+                E[n - 1] = aux
+        generate(n - 1,E,result)
 
 
 ############
@@ -501,7 +503,7 @@ def generate(m,E,result):
 
 # Draws the w-ocean
 # Saves it to a postscript file named "(w(1), w(2), ..., w(n))-ocean.eps" if save == True
-def drawOcean(w,save):
+def drawOcean2(w,save):
     turtle.clear()
     x = -500 # inital x-position
     y = 100 # initial y-position of top row
@@ -523,6 +525,29 @@ def drawOcean(w,save):
     if save:
         ts = turtle.getscreen()
         ts.getcanvas().postscript(file=str(w)+'-ocean.eps')
+
+def drawOcean(w):
+    init_turtle()
+    n = len(w)
+    if N != n:
+        set_N(n)
+    turtle.clear()
+    x = -500 # inital x-position
+    y = 100 # initial y-position of top row
+    r = 10 # inner vertex radius
+    R = 15 # outer vertex radius (for large ascents)
+    dx = int((1000 - (2*r*(N - 1)))/(N - 2)) # horizontal spacing between vertices
+    # top row
+    drawRow(x,y,dx,r,R,rightAscentSet(w),smallRightAscentSet(w),largeRightAscentSet(w))
+    # bottom row
+    drawRow(x,-y,dx,r,R,leftAscentSet(w),smallLeftAscentSet(w),largeLeftAscentSet(w))
+    # drawing planks
+    for i in smallRightAscentSet(w):
+        turtle.setposition(-500 + dx*(i - 1) + r*(i - 1), y - r)
+        turtle.down()
+        turtle.setposition(-500 + dx*(w[i - 1] - 1) + r*(w[i - 1] - 1), r - y)
+        turtle.up()
+    turtle.hideturtle()
 
 # Draws a row of the w-ocean
 # x = x-position of the left end of the row
@@ -577,7 +602,7 @@ def draw_S(n):
     if n != N:
         set_N(n)
     for w in S(n):
-        drawOcean(w,True)
+        drawOcean2(w,True)
 
 # Returns the number of floats in the w-ocean
 def num_floats(w):
@@ -609,8 +634,8 @@ def floats(w):
                     result.add(-1*i)
     return result
 
-# Returns the set of rafts of w as a set of 4-tuples
-# (a,b,w(a),w(b)) indicates there is a raft from s_a to s_b (in the top row)
+# Returns the set of rafts of w as a set of 3-tuples
+# (a,b,w(a)) indicates there is a raft from s_a to s_b (in the top row)
 # connecting to the raft from s_w(a) to s_w(b) (in the bottom row)
 def rafts(w):
     result = set()
@@ -739,7 +764,7 @@ def duplicate_pairs(n,printing,save_text,save_pic):
         if o in d:
             result.append((o,w))
             if save_pic:
-                drawOcean(w,save)
+                drawOcean2(w,True)
     result.sort()
     if printing:
         for x in result:
@@ -772,7 +797,7 @@ def bd(w,ropeSet,T,R):
             I = 10
         elif -1*(w[R[0]-1] - 1) in T:
             I = 1
-        if (R[0] - 1) in ropeSet:
+        if R[0] - 1 in ropeSet:
             J = 10
         elif R[0] - 1 in T:
             J = 1
@@ -787,6 +812,27 @@ def bd(w,ropeSet,T,R):
             L = 1
     return (I,J,K,L)
 
+def bd2(ropeSet,T,R):
+    I = J = K = L = 0
+    if R[0] - 1 > 0:
+        if -1*(R[2] - 1) in ropeSet:
+            I = 10
+        elif -1*(R[2] - 1) in T:
+            I = 1
+        if R[0] - 1 in ropeSet:
+            J = 10
+        elif R[0] - 1 in T:
+            J = 1
+    if R[1] < N - 1:
+        if -1*(R[2] + (R[1] - R[0]) + 1) in ropeSet:
+            K = 10
+        elif -1*(R[2] + (R[1] - R[0]) + 1) in T:
+            K = 1
+        if R[1] + 1 in ropeSet:
+            L = 10
+        elif R[1] + 1 in T:
+            L = 1
+    return (I,J,K,L)
 
 # Returns c_w, the number of parabolic double cosets in S_n with
 # minimal length element w
@@ -799,6 +845,16 @@ def c(w):
         result += product
     return pow(2,num_floats(w))*result
 
+# Returns c_w for the given w-ocean
+def c2(o):
+    result = 0
+    for T in powerset(o[3]):
+        product = 1
+        for R in o[0]:
+            product *= b(bd_dict[bd2(o[2],T,R)], R[1] - R[0] + 1)
+        result += product
+    return pow(2,len(o[1]))*result
+    
 # Prints c_w for each permutation w in S_n
 def print_cw(n):
     if n != N:
@@ -891,4 +947,56 @@ def test_p4(n):
         result = p4(i)
         end = time.time()
         print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
-        
+
+# Returns the set of all parabolic double cosets in S_n
+# represented as intervals, (min, max)
+def PDC_intervals_S(n):
+    if n != N:
+        set_N(n)
+    result = set()
+    for w in S(n):
+        for I in powerset(range(1,n)):
+            for J in powerset(range(1,n)):
+                result.add((minimal(I,w,J),maximal(I,w,J)))
+    return result
+
+# Returns the hamming distance of the given indexed structures
+def hamming(a,b):
+    l = len(a)
+    if l != len(b):
+        return -1
+    result = 0
+    for i in range(l):
+        if a[i] != b[i]:
+            result += 1
+    return result
+
+# Returns a crude estimate of p_n based on a random sample
+# (with replacement) of k permutations
+def rand_p(n,k):
+    if n != N:
+        set_N(n)
+    result = 0
+    for i in range(k):
+        result += c(rand_w(n))
+    return round(result*(math.factorial(n)/k))
+
+# Returns a crude estimate of p_n based on a random sample
+# (without replacement) of k permutations
+def rand_p2(n,k):
+    if n != N:
+        set_N(n)
+    result = 0
+    for w in random.sample(S(n),k):
+        result += c(w)
+    return round(result*(math.factorial(n)/k))
+
+# Returns a random permutation in S_n
+def rand_w(n):
+        s = set(range(1,n+1))
+        result = []
+        for i in range(n):
+            x = random.sample(s,1)[0]
+            s.remove(x)
+            result.append(x)
+        return tuple(result)

@@ -421,7 +421,8 @@ def parabolic_subgroup(I):
     # counters
     x = -1
     y = 0
-    # terminates when no new permutations are obtained from (pairwise) multiplying all elements
+    # terminates when no new permutations are obtained from
+    # (pairwise) multiplying all elements
     while x < y:
         x = len(result)
         for w in result:
@@ -949,15 +950,19 @@ def test_p4(n):
         print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
 
 # Returns the set of all parabolic double cosets in S_n
-# represented as intervals, (min, max)
+# represented as triples (rank, min, max)
+# The returned list is sorted by rank
 def PDC_intervals_S(n):
     if n != N:
         set_N(n)
     result = set()
     for w in S(n):
-        for I in powerset(range(1,n)):
-            for J in powerset(range(1,n)):
-                result.add((minimal(I,w,J),maximal(I,w,J)))
+        for I in powerset(leftAscentSet(w)):
+            for J in powerset(rightAscentSet(w)):
+                y = maximal(I,w,J)
+                result.add((length(y) - length(w),w,y))
+    result = list(result)
+    result.sort()
     return result
 
 # Returns the hamming distance of the given indexed structures
@@ -1000,3 +1005,39 @@ def rand_w(n):
             s.remove(x)
             result.append(x)
         return tuple(result)
+
+# Returns the set of all Bruhat intervals in S_n
+# as a set of tuples (a, b)
+def intervals_S(n):
+    Z = S(n)
+    result = set()
+    for x in Z:
+        for y in Z:
+            if le_bruhat(x,y):
+                result.add((x,y))
+    return result
+
+# Returns whether x <= y in Bruhat order
+def le_bruhat(x,y):
+    for i in range(len(x) - 1):
+        a = list(x[:i + 1])
+        b = list(y[:i + 1])
+        a.sort()
+        b.sort()
+        if not le_indexed(a,b):
+            return False
+    return True
+
+# Given two indexed structures a and b, returns whether
+# a <= b componentwise
+def le_indexed(a,b):
+    for i in range(len(a)):
+        if a[i] > b[i]:
+            return False
+    return True
+
+# Returns whether the given interval is a PDC
+def isPDC(x):
+    I = leftAscentSet(x[0]).intersection(leftDescentSet(x[1]))
+    J = rightAscentSet(x[0]).intersection(rightDescentSet(x[1]))
+    return x[0] == minimal(I,x[1],J)

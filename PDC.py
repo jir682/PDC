@@ -35,6 +35,7 @@ print('Currently N = ' + str(N) + '.')
 # NOTE: Permutations are written in one-line notation and are represented as tuples
 
 # examples for testing
+e  = (1,2,3,4,5)
 w0 = (5,4,3,2,1)
 w1 = (3, 1, 4, 5, 2)
 w2 = (1,3,4,5,7,8,2,6,14,15,16,9,10,11,12,13)
@@ -117,7 +118,7 @@ def init_turtle():
     turtle.delay(0)
     turtle.speed(0)
 
-##init_turtle()
+init_turtle()
 
 def set_N(n):
     global N
@@ -127,6 +128,11 @@ def set_N(n):
     for i in range(n):
         x[i] = n - i
     w0 = tuple(x)
+    global e
+    y = [0]*n
+    for i in range(n):
+        y[i] = i + 1
+    e = tuple(y)
     print('Currently N = ' + str(n) + '.')
 
 # Returns the powerset of the given iterable structure, as a set of tuples
@@ -975,8 +981,14 @@ def test_p4(n):
         end = time.time()
         print('p_' + str(i) + ' = '  + str(result) + '\t time elapsed: ' + str(end - start) + ' seconds')
 
+
+#########
+# Misc. #
+#########
+
+
 # Returns the set of all parabolic double cosets in S_n
-# represented as triples (rank, size, min, max)
+# represented as 4-tuples (rank, size, min, max)
 # The returned list is sorted by rank, then size
 def PDC_intervals_S(n):
     if n != N:
@@ -1106,12 +1118,12 @@ def H(I,w,J):
         result2.add(mult(w,mult(s(j),inverse(w))))
     return simple(result1.intersection(result2))
 
-# Given a set of adjacent transpositions S (represented as tuples),
-# returns the set {i : s_i in S}
+# Given a set of adjacent transpositions X (represented as tuples),
+# returns the set {i : s_i in X}
 # i.e. converts permutations -> indices
-def simple(S):
+def simple(X):
     result = set()
-    for w in S:
+    for w in X:
         for i in range(len(w)):
             if w[i] != i + 1:
                 result.add(i+1)
@@ -1131,6 +1143,145 @@ def presentation(x):
         return None
     result = [0, 0, 0]
     result[0] = tuple(leftAscentSet(x[0]).intersection(leftDescentSet(x[1])))
-    result[1] = x[0]
+    result[1] = x[1]
     result[2] = tuple(rightAscentSet(x[0]).intersection(rightDescentSet(x[1])))
     return tuple(result)
+
+def write_intervals_S(n):
+    f = open('Intervals_S_' + str(n) + '.txt','w')
+    f.write('rank \t size \t min \t max\n\n')
+    for x in PDC_intervals_S(n):
+        f.write(str(x) + '\n')
+    f.close()
+
+def print_sizes_S(n):
+    sizeMap = {}
+    for x in PDC_intervals_S(n):
+        if x[1] in sizeMap:
+            sizeMap[x[1]] += 1
+        else:
+            sizeMap[x[1]] = 1
+    for y in sizeMap:
+        print(str(y) + ': ' + str(sizeMap[y]) + '\n')
+
+def print_ranks_S(n):
+    rankMap = {}
+    for x in PDC_intervals_S(n):
+        if x[0] in rankMap:
+            rankMap[x[0]] += 1
+        else:
+            rankMap[x[0]] = 1
+    for y in rankMap:
+        print(str(y) + ': ' + str(rankMap[y]) + '\n')
+
+def print_ranks_sizes_S(n):
+    rankMap = {}
+    sizeMap = {}
+    for x in PDC_intervals_S(n):
+        if x[0] in rankMap:
+            rankMap[x[0]] += 1
+        else:
+            rankMap[x[0]] = 1
+        if x[1] in sizeMap:
+            sizeMap[x[1]] += 1
+        else:
+            sizeMap[x[1]] = 1
+    print("Ranks:\n")
+    for y in rankMap:
+        print(str(y) + ': ' + str(rankMap[y]) + '\n')
+    print("Sizes:\n")
+    for z in sizeMap:
+        print(str(z) + ': ' + str(sizeMap[z]) + '\n')
+
+def write_ranks_sizes_S(n):
+    f = open('ranks_and_sizes_S_' + str(n) +'.txt','w')
+    rankMap = {}
+    sizeMap = {}
+    for x in PDC_intervals_S(n):
+        if x[0] in rankMap:
+            rankMap[x[0]] += 1
+        else:
+            rankMap[x[0]] = 1
+        if x[1] in sizeMap:
+            sizeMap[x[1]] += 1
+        else:
+            sizeMap[x[1]] = 1
+    f.write("Ranks:\n\n")
+    for y in rankMap:
+        f.write(str(y) + ': ' + str(rankMap[y]) + '\n')
+    f.write("\nSizes:\n\n")
+    for z in sizeMap:
+        f.write(str(z) + ': ' + str(sizeMap[z]) + '\n')
+    f.close()
+
+# Prints all PDC in S_n of rank binomial(n,2) - 1
+def print_intervals_1(n):
+    if n != N:
+        set_N(n)
+    atoms = set()
+    coatoms = set()
+    for i in range(1,n):
+        atoms.add(s(i))
+        coatoms.add(mult(w0,s(i)))
+    I = set()
+    for a in atoms:
+        for b in coatoms:
+            I.add((e,b))
+            I.add((a,w0))
+    for i in I:
+        if isPDC(i):
+            print(str(i) + ' ' + str(isPDC(i)) + '\n')
+
+# Prints all PDC in S_n of rank binomial(n,2) - 1                            
+def print_intervals_2(n):
+    if n != N:
+        set_N(n)
+    atoms = set()
+    coatoms = set()
+    atoms2 = set()
+    coatoms2 = set()
+    for i in range(1,n):
+        atoms.add(s(i))
+        coatoms.add(mult(w0,s(i)))
+        for j in range(1,n):
+            if i != j:
+                m = mult(s(i),s(j))
+                atoms2.add(m)
+                coatoms2.add(mult(w0,m))
+    I = set()
+    for a in atoms:
+        for b in coatoms:
+            I.add((a,b))
+    for c in atoms2:
+        I.add((a,w0))
+    for d in coatoms2:
+        I.add((e,d))
+    for i in I:
+        if isPDC(i):
+            print(str(i) + ' ' + str(isPDC(i)) + '\n')
+
+def u(i):
+    return mult(s(i),mult(s(i-1),mult(s(i+1),s(i))))
+
+def v(i):
+    return mult(s(i),mult(s(i+1),mult(s(i-1),mult(s(i),mult(s(i+2),s(i+1))))))
+
+def z(i):
+    return mult(s(i),mult(s(i-1),mult(s(i+1),mult(s(i),mult(s(i+2),mult(s(i+1),mult(s(i-2),mult(s(i-1),s(i)))))))))
+
+# Prints ALL reduced expression for the given permutation w
+def print_reduced(w):
+    X = set()
+    print_reduced2(w, [[],[]], X)
+    for x in X:
+        print(x)
+
+# Helper function for print_reduced(w)
+def print_reduced2(w,result,resultSet):
+    if w == e:
+        resultSet.add(tuple(result[0] + result[1]))
+    else:
+        for i in leftDescentSet(w):
+            print_reduced2(mult(s(i),w), [result[0] + [i], result[1]], resultSet)
+        for j in rightDescentSet(w):
+            print_reduced2(mult(w,s(j)), [result[0], [j] + result[1]], resultSet)

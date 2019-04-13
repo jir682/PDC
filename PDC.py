@@ -313,9 +313,7 @@ def minimalLeft(w,I):
 
 # Returns the minimal element in the parabolic double coset W_I*w*W_J
 def minimal(I,w,J):
-    z = minimalLeft(w,I)
-    z = minimalRight(z,J)
-    return z
+    return minimalRight(minimalLeft(w,I), J)
 
 # Returns the maximal element in the right coset w*W_J
 def maximalRight(w,J):
@@ -345,9 +343,7 @@ def maximalLeft(w,I):
 
 # Returns the maximal element in the double coset W_I*w*W_J
 def maximal(I,w,J):
-    z = maximalLeft(w,I)
-    z = maximalRight(z,J)
-    return z
+    return maximalRight(maximalLeft(w,I), J)
 
 # Returns whether W_I*w*W_J = Z_K*z*Z_L
 def equals(I,w,J,K,z,L):
@@ -355,7 +351,7 @@ def equals(I,w,J,K,z,L):
 
 # Returns the rank of W_IwW_J
 def rank(I,w,J):
-    return len(maximal(I,w,J)) - len(minimal(I,w,J)) + 1
+    return length(maximal(I,w,J)) - length(minimal(I,w,J))
 
 
 ###############################
@@ -1285,3 +1281,25 @@ def print_reduced2(w,result,resultSet):
             print_reduced2(mult(s(i),w), [result[0] + [i], result[1]], resultSet)
         for j in rightDescentSet(w):
             print_reduced2(mult(w,s(j)), [result[0], [j] + result[1]], resultSet)
+
+# Returns the set of all reduced expressions for w.
+# Reduced expressions are represented as lists,
+# e.g. s_1s_2s_1 is represented by [1,2,1]
+def reduced(w):
+    X = set()
+    print_reduced2(w, [[],[]], X)
+    return X
+
+# Returns a list containing the number of occurrences of s_i in
+# every reduced expression for w_0 in S_n
+def counts(i,n):
+    result = []
+    set_N(n)
+    for x in reduced(w0):
+        result.append(x.count(i))
+    return result
+
+# Returns the largest integer k such that every reduced expression for
+# w_0 in S_n has at least k instances of s_i
+def mincount(i,n):
+    return min(counts(i,n))
